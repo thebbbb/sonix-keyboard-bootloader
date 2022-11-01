@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Install dependencies
+      run: sudo apt-get install libusb-1.0-0-dev libudev-dev
+
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.6.x'
+
+    - name: Setup venv
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade setuptools
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Build
+      run: |
+        source venv/bin/activate
+        fbs freeze
+        cd target
+        tar cfJ flasher-linux.tar.xz "Sonix Keyboard Flasher"
+    - uses: actions/upload-artifact@v1
+      with:
+        name: flasher-linux
+        path: target/flasher-linux.tar.xz
+
+  build-mac:
+    runs-on: macos-10.15
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.6.x'
+
+    - name: Setup venv
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install cython
+        pip install -r requirements.txt
+    - name: Build
+      run: |
+        source venv/bin/activate
+        fbs freeze
+        hdiutil create -volname "Sonix Keyboard Flasher" -srcfolder "target/Sonix Keyboard Flasher.app" -ov -format UDZO flasher-mac.dmg
+    - uses: actions/upload-artifact@v1
+      with:
+        name: flasher-mac
+        path: flasher-mac.dmg
+
+  build-win:
+    runs-on: windows-2019
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.6.x'
+
+    - name: Setup venv
+      run: |
+        python -m venv venv
+        . .\venv\Scripts\activate.ps1
+        pip install -r requirements.txt
+    - name: Build
+      run: |
+        . .\venv\Scripts\activate.ps1
+        fbs freeze
+        Compress-Archive -Path "target\Sonix Keyboard Flasher" -DestinationPath flasher-win.zip
+    - uses: actions/upload-artifact@v1
+      with:
+        name: flasher-win
+        path: flasher-win.zip
